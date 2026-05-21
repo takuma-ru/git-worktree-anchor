@@ -36,6 +36,13 @@ echo "export GIT_WORKTREE_ANCHOR_HOME=\"$GIT_WORKTREE_ANCHOR_HOME\"" >> ~/.zshrc
 
 Git must be run from a shell where `GIT_WORKTREE_ANCHOR_HOME` is exported, because the hook reads this variable at runtime.
 
+Optionally, enable automatic updates. When this is enabled, the script runs `git pull --ff-only` in the Git Worktree Anchor clone before linking files. Update failures do not stop the linking step.
+
+```bash
+export GIT_WORKTREE_ANCHOR_AUTO_UPDATE=1
+echo "export GIT_WORKTREE_ANCHOR_AUTO_UPDATE=1" >> ~/.zshrc
+```
+
 Move to the repository where you want to use Git Worktree Anchor.
 
 ```bash
@@ -136,3 +143,5 @@ If `.env.local` already exists in the worktree, the script exits without changin
 If shared files contain secrets, confirm that `.git/shared/` remains outside Git tracking and manage file permissions according to your local environment.
 
 Automatic linking depends on Git hooks. It will not run automatically if hooks are disabled or if `.git/hooks/post-checkout` is not executable. In that case, run `"$GIT_WORKTREE_ANCHOR_HOME/scripts/git-worktree-anchor.sh"` manually.
+
+Automatic updates are disabled by default. Set `GIT_WORKTREE_ANCHOR_AUTO_UPDATE=1` to opt in.

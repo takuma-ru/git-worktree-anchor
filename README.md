@@ -1,18 +1,18 @@
 # git-worktree-anchor
 
-## GWSL: Git Worktree Shared Linker
+## Git Worktree Anchor
 
-GWSL は、Git worktree を用いた開発環境において、Git 管理外のローカル設定ファイルを各 worktree へ配置するための補助機構である。
+Git Worktree Anchor は、Git worktree を用いた開発環境において、Git 管理外のローカル設定ファイルを各 worktree へ配置するための補助機構である。
 
 `.git/shared/` に配置されたファイルを、`post-checkout` フックの実行時に作業ツリー直下へシンボリックリンクとして展開する。これにより、`.env.local` や `.vscode/settings.local.json` のような、リポジトリへコミットしない開発用ファイルを複数の worktree 間で共有できる。
 
-同期処理の本体は `scripts/gwsl.sh` である。Git フックは Git 管理外であるため、各リポジトリでは `post-checkout` からこのスクリプトを呼び出すように設定する。
+同期処理の本体は `scripts/git-worktree-anchor.sh` である。Git フックは Git 管理外であるため、各リポジトリでは `post-checkout` からこのスクリプトを呼び出すように設定する。
 
 ## 前提
 
 - Git 管理下のリポジトリで使用すること。
 - macOS、Linux、または WSL 上の Bash 環境を想定する。
-- 対象リポジトリには `scripts/gwsl.sh` が存在すること。
+- 対象リポジトリには `scripts/git-worktree-anchor.sh` が存在すること。
 - `.git/` 配下の内容は Git のコミット対象ではないため、`.git/shared/` と `.git/hooks/post-checkout` は各作業環境で作成する必要がある。
 
 ## 初期設定
@@ -23,7 +23,7 @@ GWSL は、Git worktree を用いた開発環境において、Git 管理外の�
 mkdir -p .git/shared
 ```
 
-`post-checkout` フックを作成し、`scripts/gwsl.sh` を呼び出すように設定する。
+`post-checkout` フックを作成し、`scripts/git-worktree-anchor.sh` を呼び出すように設定する。
 
 ```bash
 cat > .git/hooks/post-checkout <<'HOOK'
@@ -32,16 +32,16 @@ cat > .git/hooks/post-checkout <<'HOOK'
 set -euo pipefail
 
 PROJECT_ROOT=$(git rev-parse --show-toplevel)
-exec "$PROJECT_ROOT/scripts/gwsl.sh"
+exec "$PROJECT_ROOT/scripts/git-worktree-anchor.sh"
 HOOK
 
 chmod +x .git/hooks/post-checkout
 ```
 
-`scripts/gwsl.sh` に実行権限がない場合は、次のコマンドで付与する。
+`scripts/git-worktree-anchor.sh` に実行権限がない場合は、次のコマンドで付与する。
 
 ```bash
-chmod +x scripts/gwsl.sh
+chmod +x scripts/git-worktree-anchor.sh
 ```
 
 ## 共有ファイルの登録
@@ -85,7 +85,7 @@ worktree を追加した後に対象 worktree 内でチェックアウトが発�
 手動で動作確認する場合は、次のように実行する。
 
 ```bash
-scripts/gwsl.sh
+scripts/git-worktree-anchor.sh
 ```
 
 ## 動作確認
@@ -94,7 +94,7 @@ scripts/gwsl.sh
 
 ```bash
 echo "EXAMPLE=1" > .git/shared/.env.local
-scripts/gwsl.sh
+scripts/git-worktree-anchor.sh
 ls -l .env.local
 ```
 
@@ -106,4 +106,4 @@ ls -l .env.local
 
 共有対象に機密情報を含める場合は、`.git/shared/` が Git 管理外であることを確認すること。また、ファイルの取り扱いは各開発環境の権限管理に従うこと。
 
-自動実行は Git フックに依存するため、フックが無効化されている環境、または `.git/hooks/post-checkout` に実行権限がない環境では動作しない。ただし、`scripts/gwsl.sh` を手動で実行することにより、同じ同期処理を行うことはできる。
+自動実行は Git フックに依存するため、フックが無効化されている環境、または `.git/hooks/post-checkout` に実行権限がない環境では動作しない。ただし、`scripts/git-worktree-anchor.sh` を手動で実行することにより、同じ同期処理を行うことはできる。

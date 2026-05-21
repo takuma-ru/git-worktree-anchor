@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-# GWSL (Git Worktree Shared Linker)
+# Git Worktree Anchor
 # Link files from the repository common Git directory into the current worktree.
 
 COMMON_GIT_DIR=$(git rev-parse --git-common-dir)
@@ -17,7 +17,7 @@ if [ -e "$PROJECT_ROOT/.env.local" ] || [ -L "$PROJECT_ROOT/.env.local" ]; then
   exit 0
 fi
 
-echo "[GWSL] Synchronizing shared files from .git/shared..."
+echo "[Git Worktree Anchor] Synchronizing shared files from .git/shared..."
 
 cd "$SHARED_DIR"
 
@@ -34,4 +34,4 @@ find . -type f | while read -r FILE_PATH; do
   echo "   Created link: ${FILE_PATH#./}"
 done
 
-echo "[GWSL] All shared files linked successfully."
+echo "[Git Worktree Anchor] All shared files linked successfully."

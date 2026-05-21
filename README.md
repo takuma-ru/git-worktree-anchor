@@ -1,6 +1,4 @@
-# git-worktree-anchor
-
-## Git Worktree Anchor
+# Git Worktree Anchor
 
 Git Worktree Anchor は、Git worktree を用いた開発環境において、Git 管理外のローカル設定ファイルを各 worktree へ配置するための補助機構である。
 

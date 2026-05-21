@@ -6,6 +6,13 @@ Git Worktree Anchor は、Git worktree を用いた開発環境において、Gi
 
 同期処理の本体は `scripts/git-worktree-anchor.sh` である。Git フックは Git 管理外であるため、利用先リポジトリでは `post-checkout` からこのスクリプトを呼び出すように設定する。
 
+## 前提
+
+- Git 管理下のリポジトリで使用すること。
+- macOS、Linux、または WSL 上の Bash 環境を想定する。
+- `git` コマンドが使用可能であること。
+- `.git/` 配下の内容は Git のコミット対象ではないため、`.git/shared/` と `.git/hooks/post-checkout` は各作業環境で作成する必要がある。
+
 ## Getting Started
 
 まず、このリポジトリを任意の場所へ clone する。
@@ -71,13 +78,6 @@ ls -l .env.local
 ```
 
 `.env.local` が `.git/shared/.env.local` を参照するシンボリックリンクとして表示されれば、設定は完了である。
-
-## 前提
-
-- Git 管理下のリポジトリで使用すること。
-- macOS、Linux、または WSL 上の Bash 環境を想定する。
-- `git-worktree-anchor` リポジトリを clone 済みであり、`GIT_WORKTREE_ANCHOR_HOME` が clone 先の絶対パスを指していること。
-- `.git/` 配下の内容は Git のコミット対象ではないため、`.git/shared/` と `.git/hooks/post-checkout` は各作業環境で作成する必要がある。
 
 ## 共有ファイルの登録
 

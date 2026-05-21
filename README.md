@@ -14,14 +14,18 @@ Git Worktree Anchor は、Git worktree を用いた開発環境において、Gi
 git clone https://github.com/takuma-ru/git-worktree-anchor.git
 ```
 
-clone したディレクトリの絶対パスを控える。
+clone したディレクトリを環境変数に登録する。
 
 ```bash
 cd git-worktree-anchor
-pwd
+export GIT_WORKTREE_ANCHOR_HOME="$(pwd)"
 ```
 
-以降の例では、clone 先を `/path/to/git-worktree-anchor` とする。
+継続的に使用する場合は、使用しているシェルの設定ファイルにも同じ定義を追加する。Bash を使用している場合は、`~/.zshrc` を `~/.bashrc` などに読み替えること。
+
+```bash
+echo "export GIT_WORKTREE_ANCHOR_HOME=\"$GIT_WORKTREE_ANCHOR_HOME\"" >> ~/.zshrc
+```
 
 次に、Git Worktree Anchor を利用したいリポジトリへ移動する。
 
@@ -46,13 +50,11 @@ cat > "$COMMON_GIT_DIR/hooks/post-checkout" <<'HOOK'
 
 set -euo pipefail
 
-exec "/path/to/git-worktree-anchor/scripts/git-worktree-anchor.sh"
+exec "$GIT_WORKTREE_ANCHOR_HOME/scripts/git-worktree-anchor.sh"
 HOOK
 
 chmod +x "$COMMON_GIT_DIR/hooks/post-checkout"
 ```
-
-`/path/to/git-worktree-anchor` は、実際に clone したディレクトリの絶対パスへ置き換えること。
 
 最後に、共有したいファイルを `.git/shared/` へ配置する。
 
@@ -64,7 +66,7 @@ mv .env.local "$COMMON_GIT_DIR/shared/.env.local"
 手動で同期を確認する。
 
 ```bash
-/path/to/git-worktree-anchor/scripts/git-worktree-anchor.sh
+"$GIT_WORKTREE_ANCHOR_HOME/scripts/git-worktree-anchor.sh"
 ls -l .env.local
 ```
 
@@ -74,40 +76,8 @@ ls -l .env.local
 
 - Git 管理下のリポジトリで使用すること。
 - macOS、Linux、または WSL 上の Bash 環境を想定する。
-- `git-worktree-anchor` リポジトリを clone 済みであり、利用先リポジトリから `scripts/git-worktree-anchor.sh` を実行できること。
+- `git-worktree-anchor` リポジトリを clone 済みであり、`GIT_WORKTREE_ANCHOR_HOME` が clone 先の絶対パスを指していること。
 - `.git/` 配下の内容は Git のコミット対象ではないため、`.git/shared/` と `.git/hooks/post-checkout` は各作業環境で作成する必要がある。
-
-## 初期設定
-
-共有ファイル置き場を作成する。
-
-```bash
-COMMON_GIT_DIR=$(git rev-parse --git-common-dir)
-mkdir -p "$COMMON_GIT_DIR/shared"
-```
-
-`post-checkout` フックを作成し、`scripts/git-worktree-anchor.sh` を呼び出すように設定する。以下は、スクリプト本体を利用先リポジトリ内に配置している場合の例である。
-
-```bash
-COMMON_GIT_DIR=$(git rev-parse --git-common-dir)
-
-cat > "$COMMON_GIT_DIR/hooks/post-checkout" <<'HOOK'
-#!/usr/bin/env bash
-
-set -euo pipefail
-
-PROJECT_ROOT=$(git rev-parse --show-toplevel)
-exec "$PROJECT_ROOT/scripts/git-worktree-anchor.sh"
-HOOK
-
-chmod +x "$COMMON_GIT_DIR/hooks/post-checkout"
-```
-
-`scripts/git-worktree-anchor.sh` に実行権限がない場合は、次のコマンドで付与する。
-
-```bash
-chmod +x scripts/git-worktree-anchor.sh
-```
 
 ## 共有ファイルの登録
 
@@ -151,17 +121,7 @@ worktree を追加した後に対象 worktree 内でチェックアウトが発�
 手動で動作確認する場合は、次のように実行する。
 
 ```bash
-scripts/git-worktree-anchor.sh
-```
-
-## 動作確認
-
-次の手順で、`.env.local` のリンク作成を確認できる。
-
-```bash
-COMMON_GIT_DIR=$(git rev-parse --git-common-dir)
-echo "EXAMPLE=1" > "$COMMON_GIT_DIR/shared/.env.local"
-scripts/git-worktree-anchor.sh
+"$GIT_WORKTREE_ANCHOR_HOME/scripts/git-worktree-anchor.sh"
 ls -l .env.local
 ```
 
@@ -173,4 +133,4 @@ ls -l .env.local
 
 共有対象に機密情報を含める場合は、`.git/shared/` が Git 管理外であることを確認すること。また、ファイルの取り扱いは各開発環境の権限管理に従うこと。
 
-自動実行は Git フックに依存するため、フックが無効化されている環境、または `.git/hooks/post-checkout` に実行権限がない環境では動作しない。ただし、`scripts/git-worktree-anchor.sh` を手動で実行することにより、同じ同期処理を行うことはできる。
+自動実行は Git フックに依存するため、フックが無効化されている環境、または `.git/hooks/post-checkout` に実行権限がない環境では動作しない。ただし、`"$GIT_WORKTREE_ANCHOR_HOME/scripts/git-worktree-anchor.sh"` を手動で実行することにより、同じ同期処理を行うことはできる。

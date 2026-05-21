@@ -9,6 +9,20 @@ COMMON_GIT_DIR=$(cd "$(git rev-parse --git-common-dir)" && pwd -P)
 SHARED_DIR="$COMMON_GIT_DIR/shared"
 PROJECT_ROOT=$(git rev-parse --show-toplevel)
 
+if [ -n "${NO_COLOR:-}" ]; then
+  BOLD=""
+  DIM=""
+  CYAN=""
+  GREEN=""
+  RESET=""
+else
+  BOLD=$'\033[1m'
+  DIM=$'\033[2m'
+  CYAN=$'\033[36m'
+  GREEN=$'\033[32m'
+  RESET=$'\033[0m'
+fi
+
 if [ ! -d "$SHARED_DIR" ]; then
   exit 0
 fi
@@ -17,7 +31,8 @@ if [ -e "$PROJECT_ROOT/.env.local" ] || [ -L "$PROJECT_ROOT/.env.local" ]; then
   exit 0
 fi
 
-echo "[anchor] Linking shared files from .git/shared"
+echo "${CYAN}${BOLD}◆ anchor${RESET} ${DIM}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
+echo "${CYAN}│${RESET} Linking shared files from ${BOLD}.git/shared${RESET}"
 
 cd "$SHARED_DIR"
 
@@ -31,7 +46,7 @@ find . -type f | while read -r FILE_PATH; do
   fi
 
   ln -sf "$ABS_SRC_PATH" "$TARGET_PATH"
-  echo "[anchor] linked ${FILE_PATH#./}"
+  echo "${GREEN}├─${RESET} linked ${BOLD}${FILE_PATH#./}${RESET}"
 done
 
-echo "[anchor] done"
+echo "${GREEN}└─ done${RESET}"

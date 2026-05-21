@@ -6,12 +6,43 @@ GWSL は、Git worktree を用いた開発環境において、Git 管理外の�
 
 `.git/shared/` に配置されたファイルを、`post-checkout` フックの実行時に作業ツリー直下へシンボリックリンクとして展開する。これにより、`.env.local` や `.vscode/settings.local.json` のような、リポジトリへコミットしない開発用ファイルを複数の worktree 間で共有できる。
 
+同期処理の本体は `scripts/gwsl.sh` である。Git フックは Git 管理外であるため、各リポジトリでは `post-checkout` からこのスクリプトを呼び出すように設定する。
+
 ## 前提
 
 - Git 管理下のリポジトリで使用すること。
 - macOS、Linux、または WSL 上の Bash 環境を想定する。
-- 対象リポジトリには `.git/shared/` と `.git/hooks/post-checkout` が設定済みであること。
-- `.git/` 配下の内容は Git のコミット対象ではないため、別のクローンで使用する場合は同じ設定を再度作成する必要がある。
+- 対象リポジトリには `scripts/gwsl.sh` が存在すること。
+- `.git/` 配下の内容は Git のコミット対象ではないため、`.git/shared/` と `.git/hooks/post-checkout` は各作業環境で作成する必要がある。
+
+## 初期設定
+
+共有ファイル置き場を作成する。
+
+```bash
+mkdir -p .git/shared
+```
+
+`post-checkout` フックを作成し、`scripts/gwsl.sh` を呼び出すように設定する。
+
+```bash
+cat > .git/hooks/post-checkout <<'HOOK'
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+PROJECT_ROOT=$(git rev-parse --show-toplevel)
+exec "$PROJECT_ROOT/scripts/gwsl.sh"
+HOOK
+
+chmod +x .git/hooks/post-checkout
+```
+
+`scripts/gwsl.sh` に実行権限がない場合は、次のコマンドで付与する。
+
+```bash
+chmod +x scripts/gwsl.sh
+```
 
 ## 共有ファイルの登録
 
@@ -54,7 +85,7 @@ worktree を追加した後に対象 worktree 内でチェックアウトが発�
 手動で動作確認する場合は、次のように実行する。
 
 ```bash
-.git/hooks/post-checkout
+scripts/gwsl.sh
 ```
 
 ## 動作確認
@@ -63,7 +94,7 @@ worktree を追加した後に対象 worktree 内でチェックアウトが発�
 
 ```bash
 echo "EXAMPLE=1" > .git/shared/.env.local
-.git/hooks/post-checkout
+scripts/gwsl.sh
 ls -l .env.local
 ```
 
@@ -75,4 +106,4 @@ ls -l .env.local
 
 共有対象に機密情報を含める場合は、`.git/shared/` が Git 管理外であることを確認すること。また、ファイルの取り扱いは各開発環境の権限管理に従うこと。
 
-この仕組みは Git フックに依存するため、フックが無効化されている環境、または `.git/hooks/post-checkout` に実行権限がない環境では動作しない。
+自動実行は Git フックに依存するため、フックが無効化されている環境、または `.git/hooks/post-checkout` に実行権限がない環境では動作しない。ただし、`scripts/gwsl.sh` を手動で実行することにより、同じ同期処理を行うことはできる。

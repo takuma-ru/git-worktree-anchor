@@ -4,13 +4,77 @@ Git Worktree Anchor は、Git worktree を用いた開発環境において、Gi
 
 `.git/shared/` に配置されたファイルを、`post-checkout` フックの実行時に作業ツリー直下へシンボリックリンクとして展開する。これにより、`.env.local` や `.vscode/settings.local.json` のような、リポジトリへコミットしない開発用ファイルを複数の worktree 間で共有できる。
 
-同期処理の本体は `scripts/git-worktree-anchor.sh` である。Git フックは Git 管理外であるため、各リポジトリでは `post-checkout` からこのスクリプトを呼び出すように設定する。
+同期処理の本体は `scripts/git-worktree-anchor.sh` である。Git フックは Git 管理外であるため、利用先リポジトリでは `post-checkout` からこのスクリプトを呼び出すように設定する。
+
+## Getting Started
+
+まず、このリポジトリを任意の場所へ clone する。
+
+```bash
+git clone https://github.com/takuma-ru/git-worktree-anchor.git
+```
+
+clone したディレクトリの絶対パスを控える。
+
+```bash
+cd git-worktree-anchor
+pwd
+```
+
+以降の例では、clone 先を `/path/to/git-worktree-anchor` とする。
+
+次に、Git Worktree Anchor を利用したいリポジトリへ移動する。
+
+```bash
+cd /path/to/target-repository
+```
+
+共有ファイル置き場を作成する。
+
+```bash
+COMMON_GIT_DIR=$(git rev-parse --git-common-dir)
+mkdir -p "$COMMON_GIT_DIR/shared"
+```
+
+`post-checkout` フックを作成し、clone 済みの `git-worktree-anchor.sh` を呼び出すように設定する。
+
+```bash
+COMMON_GIT_DIR=$(git rev-parse --git-common-dir)
+
+cat > "$COMMON_GIT_DIR/hooks/post-checkout" <<'HOOK'
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+exec "/path/to/git-worktree-anchor/scripts/git-worktree-anchor.sh"
+HOOK
+
+chmod +x "$COMMON_GIT_DIR/hooks/post-checkout"
+```
+
+`/path/to/git-worktree-anchor` は、実際に clone したディレクトリの絶対パスへ置き換えること。
+
+最後に、共有したいファイルを `.git/shared/` へ配置する。
+
+```bash
+COMMON_GIT_DIR=$(git rev-parse --git-common-dir)
+mv .env.local "$COMMON_GIT_DIR/shared/.env.local"
+```
+
+手動で同期を確認する。
+
+```bash
+/path/to/git-worktree-anchor/scripts/git-worktree-anchor.sh
+ls -l .env.local
+```
+
+`.env.local` が `.git/shared/.env.local` を参照するシンボリックリンクとして表示されれば、設定は完了である。
 
 ## 前提
 
 - Git 管理下のリポジトリで使用すること。
 - macOS、Linux、または WSL 上の Bash 環境を想定する。
-- 対象リポジトリには `scripts/git-worktree-anchor.sh` が存在すること。
+- `git-worktree-anchor` リポジトリを clone 済みであり、利用先リポジトリから `scripts/git-worktree-anchor.sh` を実行できること。
 - `.git/` 配下の内容は Git のコミット対象ではないため、`.git/shared/` と `.git/hooks/post-checkout` は各作業環境で作成する必要がある。
 
 ## 初期設定
@@ -18,13 +82,16 @@ Git Worktree Anchor は、Git worktree を用いた開発環境において、Gi
 共有ファイル置き場を作成する。
 
 ```bash
-mkdir -p .git/shared
+COMMON_GIT_DIR=$(git rev-parse --git-common-dir)
+mkdir -p "$COMMON_GIT_DIR/shared"
 ```
 
-`post-checkout` フックを作成し、`scripts/git-worktree-anchor.sh` を呼び出すように設定する。
+`post-checkout` フックを作成し、`scripts/git-worktree-anchor.sh` を呼び出すように設定する。以下は、スクリプト本体を利用先リポジトリ内に配置している場合の例である。
 
 ```bash
-cat > .git/hooks/post-checkout <<'HOOK'
+COMMON_GIT_DIR=$(git rev-parse --git-common-dir)
+
+cat > "$COMMON_GIT_DIR/hooks/post-checkout" <<'HOOK'
 #!/usr/bin/env bash
 
 set -euo pipefail
@@ -33,7 +100,7 @@ PROJECT_ROOT=$(git rev-parse --show-toplevel)
 exec "$PROJECT_ROOT/scripts/git-worktree-anchor.sh"
 HOOK
 
-chmod +x .git/hooks/post-checkout
+chmod +x "$COMMON_GIT_DIR/hooks/post-checkout"
 ```
 
 `scripts/git-worktree-anchor.sh` に実行権限がない場合は、次のコマンドで付与する。
@@ -49,9 +116,10 @@ chmod +x scripts/git-worktree-anchor.sh
 例:
 
 ```bash
-mkdir -p .git/shared/.vscode
-cp .env.local .git/shared/.env.local
-cp .vscode/settings.local.json .git/shared/.vscode/settings.local.json
+COMMON_GIT_DIR=$(git rev-parse --git-common-dir)
+mkdir -p "$COMMON_GIT_DIR/shared/.vscode"
+mv .env.local "$COMMON_GIT_DIR/shared/.env.local"
+mv .vscode/settings.local.json "$COMMON_GIT_DIR/shared/.vscode/settings.local.json"
 ```
 
 `.git/shared/` 配下のディレクトリ構造は、作業ツリー側にもそのまま反映される。
@@ -91,7 +159,8 @@ scripts/git-worktree-anchor.sh
 次の手順で、`.env.local` のリンク作成を確認できる。
 
 ```bash
-echo "EXAMPLE=1" > .git/shared/.env.local
+COMMON_GIT_DIR=$(git rev-parse --git-common-dir)
+echo "EXAMPLE=1" > "$COMMON_GIT_DIR/shared/.env.local"
 scripts/git-worktree-anchor.sh
 ls -l .env.local
 ```

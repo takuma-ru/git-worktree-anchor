@@ -5,7 +5,7 @@ set -euo pipefail
 # Git Worktree Anchor
 # Link files from the repository common Git directory into the current worktree.
 
-COMMON_GIT_DIR=$(git rev-parse --git-common-dir)
+COMMON_GIT_DIR=$(cd "$(git rev-parse --git-common-dir)" && pwd -P)
 SHARED_DIR="$COMMON_GIT_DIR/shared"
 PROJECT_ROOT=$(git rev-parse --show-toplevel)
 

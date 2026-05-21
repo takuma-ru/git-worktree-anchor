@@ -17,7 +17,7 @@ if [ -e "$PROJECT_ROOT/.env.local" ] || [ -L "$PROJECT_ROOT/.env.local" ]; then
   exit 0
 fi
 
-echo "[Git Worktree Anchor] Synchronizing shared files from .git/shared..."
+echo "[anchor] Linking shared files from .git/shared"
 
 cd "$SHARED_DIR"
 
@@ -31,7 +31,7 @@ find . -type f | while read -r FILE_PATH; do
   fi
 
   ln -sf "$ABS_SRC_PATH" "$TARGET_PATH"
-  echo "   Created link: ${FILE_PATH#./}"
+  echo "[anchor] linked ${FILE_PATH#./}"
 done
 
-echo "[Git Worktree Anchor] All shared files linked successfully."
+echo "[anchor] done"

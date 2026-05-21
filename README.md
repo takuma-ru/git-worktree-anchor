@@ -1,53 +1,55 @@
 # Git Worktree Anchor
 
-Git Worktree Anchor は、Git worktree を用いた開発環境において、Git 管理外のローカル設定ファイルを各 worktree へ配置するための補助機構である。
+Git Worktree Anchor is a small helper for sharing ignored local development files across Git worktrees.
 
-`.git/shared/` に配置されたファイルを、`post-checkout` フックの実行時に作業ツリー直下へシンボリックリンクとして展開する。これにより、`.env.local` や `.vscode/settings.local.json` のような、リポジトリへコミットしない開発用ファイルを複数の worktree 間で共有できる。
+It links files from `.git/shared/` into the current worktree when the `post-checkout` hook runs. This is useful for files such as `.env.local` or `.vscode/settings.local.json` that should not be committed but should be reused across multiple worktrees.
 
-同期処理の本体は `scripts/git-worktree-anchor.sh` である。Git フックは Git 管理外であるため、利用先リポジトリでは `post-checkout` からこのスクリプトを呼び出すように設定する。
+The linker script is `scripts/git-worktree-anchor.sh`. Git hooks are not tracked by Git, so each target repository must configure its own `post-checkout` hook to call this script.
 
-## 前提
+## Prerequisites
 
-- Git 管理下のリポジトリで使用すること。
-- macOS、Linux、または WSL 上の Bash 環境を想定する。
-- `git` コマンドが使用可能であること。
-- `.git/` 配下の内容は Git のコミット対象ではないため、`.git/shared/` と `.git/hooks/post-checkout` は各作業環境で作成する必要がある。
+- Use this in a Git repository.
+- Bash is required. macOS, Linux, and WSL are the intended environments.
+- The `git` command must be available.
+- Files under `.git/` are not committed, so `.git/shared/` and `.git/hooks/post-checkout` must be created per local repository.
 
 ## Getting Started
 
-まず、このリポジトリを任意の場所へ clone する。
+Clone this repository to any location.
 
 ```bash
 git clone https://github.com/takuma-ru/git-worktree-anchor.git
 ```
 
-clone したディレクトリを環境変数に登録する。
+Register the clone location in an environment variable.
 
 ```bash
 cd git-worktree-anchor
 export GIT_WORKTREE_ANCHOR_HOME="$(pwd)"
 ```
 
-継続的に使用する場合は、使用しているシェルの設定ファイルにも同じ定義を追加する。Bash を使用している場合は、`~/.zshrc` を `~/.bashrc` などに読み替えること。
+To keep using it across shell sessions, add the same value to your shell configuration. If you use Bash, replace `~/.zshrc` with `~/.bashrc` or another file loaded by your shell.
 
 ```bash
 echo "export GIT_WORKTREE_ANCHOR_HOME=\"$GIT_WORKTREE_ANCHOR_HOME\"" >> ~/.zshrc
 ```
 
-次に、Git Worktree Anchor を利用したいリポジトリへ移動する。
+Git must be run from a shell where `GIT_WORKTREE_ANCHOR_HOME` is exported, because the hook reads this variable at runtime.
+
+Move to the repository where you want to use Git Worktree Anchor.
 
 ```bash
 cd /path/to/target-repository
 ```
 
-共有ファイル置き場を作成する。
+Create the shared file directory.
 
 ```bash
 COMMON_GIT_DIR=$(git rev-parse --git-common-dir)
 mkdir -p "$COMMON_GIT_DIR/shared"
 ```
 
-`post-checkout` フックを作成し、clone 済みの `git-worktree-anchor.sh` を呼び出すように設定する。
+Create a `post-checkout` hook that calls the cloned linker script.
 
 ```bash
 COMMON_GIT_DIR=$(git rev-parse --git-common-dir)
@@ -63,27 +65,27 @@ HOOK
 chmod +x "$COMMON_GIT_DIR/hooks/post-checkout"
 ```
 
-最後に、共有したいファイルを `.git/shared/` へ配置する。
+Move the local file you want to share into `.git/shared/`.
 
 ```bash
 COMMON_GIT_DIR=$(git rev-parse --git-common-dir)
 mv .env.local "$COMMON_GIT_DIR/shared/.env.local"
 ```
 
-手動で同期を確認する。
+Run the linker manually to verify the setup.
 
 ```bash
 "$GIT_WORKTREE_ANCHOR_HOME/scripts/git-worktree-anchor.sh"
 ls -l .env.local
 ```
 
-`.env.local` が `.git/shared/.env.local` を参照するシンボリックリンクとして表示されれば、設定は完了である。
+The setup is complete if `.env.local` is shown as a symlink that points to `.git/shared/.env.local`.
 
-## 共有ファイルの登録
+## Shared Files
 
-共有したいファイルを `.git/shared/` 配下に配置する。
+Place any file you want to share under `.git/shared/`.
 
-例:
+Example:
 
 ```bash
 COMMON_GIT_DIR=$(git rev-parse --git-common-dir)
@@ -92,45 +94,45 @@ mv .env.local "$COMMON_GIT_DIR/shared/.env.local"
 mv .vscode/settings.local.json "$COMMON_GIT_DIR/shared/.vscode/settings.local.json"
 ```
 
-`.git/shared/` 配下のディレクトリ構造は、作業ツリー側にもそのまま反映される。
+The directory structure under `.git/shared/` is mirrored into each worktree.
 
-例えば、次のファイルを配置した場合:
+For example, these shared files:
 
 ```text
 .git/shared/.env.local
 .git/shared/.vscode/settings.local.json
 ```
 
-フック実行後、作業ツリー側には次のリンクが作成される。
+create these links in the worktree:
 
 ```text
 .env.local -> .git/shared/.env.local
 .vscode/settings.local.json -> .git/shared/.vscode/settings.local.json
 ```
 
-## 実行方法
+## Usage
 
-通常は、ブランチのチェックアウト時に Git が `post-checkout` フックを実行する。
+Normally, Git runs the `post-checkout` hook when a branch is checked out.
 
 ```bash
 git checkout <branch>
 ```
 
-worktree を追加した後に対象 worktree 内でチェックアウトが発生すると、`.git/shared/` に登録されたファイルが自動的にリンクされる。
+After a worktree is created, a checkout inside that worktree links the files registered under `.git/shared/`.
 
-手動で動作確認する場合は、次のように実行する。
+You can also run the linker manually.
 
 ```bash
 "$GIT_WORKTREE_ANCHOR_HOME/scripts/git-worktree-anchor.sh"
 ls -l .env.local
 ```
 
-`.env.local` が `.git/shared/.env.local` を参照するシンボリックリンクとして表示されれば、設定は有効である。
+The setup is valid if `.env.local` is shown as a symlink that points to `.git/shared/.env.local`.
 
-## 注意事項
+## Notes
 
-`.env.local` が既に作業ツリー側に存在する場合、フックは処理を終了する。これは既存のローカル設定を不用意に上書きしないためである。
+If `.env.local` already exists in the worktree, the script exits without changing anything. This prevents accidental overwrites of existing local configuration.
 
-共有対象に機密情報を含める場合は、`.git/shared/` が Git 管理外であることを確認すること。また、ファイルの取り扱いは各開発環境の権限管理に従うこと。
+If shared files contain secrets, confirm that `.git/shared/` remains outside Git tracking and manage file permissions according to your local environment.
 
-自動実行は Git フックに依存するため、フックが無効化されている環境、または `.git/hooks/post-checkout` に実行権限がない環境では動作しない。ただし、`"$GIT_WORKTREE_ANCHOR_HOME/scripts/git-worktree-anchor.sh"` を手動で実行することにより、同じ同期処理を行うことはできる。
+Automatic linking depends on Git hooks. It will not run automatically if hooks are disabled or if `.git/hooks/post-checkout` is not executable. In that case, run `"$GIT_WORKTREE_ANCHOR_HOME/scripts/git-worktree-anchor.sh"` manually.
